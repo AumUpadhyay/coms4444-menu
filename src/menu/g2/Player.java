@@ -10,8 +10,8 @@ public class Player extends menu.sim.Player {
 
 	int size = 0;
 	int pantrySize = 0;
-	List<FoodType> breakfastRanks; // weekly
-	List<FoodType> lunchRanks;
+	Map<FamilyMember,List<FoodType>> breakfastRanks; // weekly
+	Map<FamilyMember,List<FoodType>> lunchRanks;
 	List<FoodType> dinnerRanks;
 	StorePredictor pred;
 	ShoppingList prevList;
@@ -214,8 +214,10 @@ public class Player extends menu.sim.Player {
 		Map<FamilyMember, List<FoodType>> familyBreakfastRankings = new HashMap<>();
 		
 		for(FamilyMember member: familyMembers){
-			familyBreakfastRankings.put(familyMembers, calcOrderRanksBreakfastForEachPersonHelper(member));
+			familyBreakfastRankings.put(member, calcOrderRanksBreakfastForEachPersonHelper(member));
 		}
+
+		return familyBreakfastRankings;
 		
 
 	}
@@ -224,13 +226,13 @@ public class Player extends menu.sim.Player {
 
 
 	//method for individual choices
-	List<FoodType> calcOrderRanksBreakfastForEachPersonHelper(FamilyMember> familyMember) {
+	List<FoodType> calcOrderRanksBreakfastForEachPersonHelper(FamilyMember familyMember) {
 		Food f = new Food();
 		List<FoodType> allBreakfasts = f.getFoodTypes(MealType.BREAKFAST);
 		Map<FoodType, Double> lowestPerson = new HashMap<>();
 		for(FoodType food: allBreakfasts){
 			double lowest = 1.0;
-			lowest = member.getFoodPreference(food);
+			lowest = familyMember.getFoodPreference(food);
 			
 			lowestPerson.put(food, lowest);
 		}
@@ -265,18 +267,20 @@ public class Player extends menu.sim.Player {
 			familyLunchRankings.put(member, calcOrderRanksLunchForEachHelper(member));
 		}
 
+		return familyLunchRankings;
+
 
 	}
 
 
 
-	List<FoodType> calcOrderRanksLunchForEachHelper(List<FamilyMember> familyMembers) {
+	List<FoodType> calcOrderRanksLunchForEachHelper(FamilyMember familyMember) {
 		Food f = new Food();
 		List<FoodType> allBreakfasts = f.getFoodTypes(MealType.LUNCH);
 		Map<FoodType, Double> lowestPerson = new HashMap<>();
 		for(FoodType food: allBreakfasts){
 			double lowest = 1.0;
-			lowest = member.getFoodPreference(food);
+			lowest = familyMember.getFoodPreference(food);
 			lowestPerson.put(food, lowest);
 		}
 		return sortByValue(lowestPerson);
@@ -341,9 +345,37 @@ public class Player extends menu.sim.Player {
 
 		List<FoodType> breakfasts = new ArrayList<>();
 
+		//could have a map of food -> frequency, order the difference
+
+		List<FoodType> topFoods = new ArrayList<>();
+		//topFoods.add(breakfastRanks.get(0));
+		//topFoods.add(breakfastRanks.get(1));
+		//topFoods.add(breakfastRanks.get(2));
+
+		/*for(int i = 0; i < 10; i++) {
+			topFoods.add(breakfastRanks.get(i));
+		}
+
+		topFoods.sort((food1, food2) -> (int) (pred.probs.get(food1)*100) - (int) (pred.probs.get(food2)*100));
+
+		for(FoodType food : topFoods) {
+			System.out.println("food is " + food);
+			System.out.println("prob is " + pred.probs.get(food));
+		}*/
+
+		List<FamilyMember> familyMembers = new ArrayList<>(breakfastRanks.keySet());
+		familyMembers.sort((member1, member2) -> (int) (100*member1.getSatisfaction()) - (int) (100*member2.getSatisfaction()));
+
+		FamilyMember leastSatisfied = familyMembers.get(0);
+
+		for(FamilyMember familyMember : familyMembers) {
+			System.out.println("satisfaction is " + familyMember.getSatisfaction());
+		}
+
+
 		//target top 3 breakfasts
 		for(int i = 0; i < 3; i++) {
-			FoodType topFood = breakfastRanks.get(i);
+			FoodType topFood = breakfastRanks.get(leastSatisfied).get(i);
 			int freqTop = map.get(MealType.BREAKFAST).get(topFood);
 
 			breakfasts = addFoods(breakfasts, topFood, (int) (difference/3*1.5));
@@ -371,12 +403,17 @@ public class Player extends menu.sim.Player {
 
 		List<FoodType> lunches = new ArrayList<>();
 
+		List<FamilyMember> familyMembers = new ArrayList<>(breakfastRanks.keySet());
+		familyMembers.sort((member1, member2) -> (int) (100*member1.getSatisfaction()) - (int) (100*member2.getSatisfaction()));
+
+		FamilyMember leastSatisfied = familyMembers.get(0);
+
 		//target top 5 top lunches
-		for(int i = 0; i < 5; i++) {
-			FoodType topFood = lunchRanks.get(i);
+		for(int i = 0; i < 3; i++) {
+			FoodType topFood = lunchRanks.get(leastSatisfied).get(i);
 			int freqTop = map.get(MealType.LUNCH).get(topFood);
 
-			lunches = addFoods(lunches, topFood, (int) (difference/5*1.3));
+			lunches = addFoods(lunches, topFood, (int) (difference/3*1.3));
 		}
 
 	/*	for(int i = 6; i < lunchRanks.size(); i++) {
